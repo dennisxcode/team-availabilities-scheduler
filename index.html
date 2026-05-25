@@ -1,0 +1,2762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="description" content="Robotics Squad — weekly availability scheduler for the team.">
+<meta name="color-scheme" content="dark">
+<title>Robotics Squad — Schedule</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0a'/%3E%3Cpath d='M16 5 L26 11 L26 21 L16 27 L6 21 L6 11 Z' fill='none' stroke='%2318cc48' stroke-width='2.2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%2318cc48'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<style>
+  /* ── TOKENS ── */
+  :root {
+    --bg:       #0a0a0a;
+    --s1:       #111111;
+    --s2:       #161616;
+    --s3:       #1c1c1c;
+    --b1:       #222222;
+    --b2:       #2a2a2a;
+    --b3:       #333333;
+    --txt:      #e8e8e8;
+    --txt2:     #888888;
+    --txt3:     #444444;
+
+    --accent:   #e8e8e8;   /* UI chrome: buttons, tabs, indicators */
+    --accent-active: #ffffff;
+
+    --dennis:  #18cc48;   /* player colors — never used for UI */
+    --felicia: #ff2d78;
+    --dominic: #6b9fff;
+    --jerry:   #ff7a00;
+    --houman:  #ebc91e;
+
+    --heat-2: rgba(250,210,0,0.9);   /* yellow border — possible */
+    --heat-3: rgba(100,220,120,0.85); /* green — optimal */
+    --heat-4: rgba(255,255,255,0.6);  /* white — everyone */
+
+    --today: rgba(24,204,72,0.06);   /* faint green column wash */
+    --today-line: rgba(24,204,72,0.55);
+
+    --radius: 2px;
+    --sp1: 4px;
+    --sp2: 8px;
+    --sp3: 12px;
+    --sp4: 16px;
+    --sp5: 24px;
+    --sp6: 32px;
+    --sp7: 48px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    font-family: 'Geist', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  .app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: var(--sp7) var(--sp5) 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    margin-bottom: var(--sp6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp3);
+  }
+
+  .wordmark {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--txt2);
+    display: flex;
+    align-items: center;
+    gap: var(--sp2);
+  }
+
+  .wordmark::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--dennis);
+    transform: rotate(45deg);
+    box-shadow: 0 0 8px rgba(24,204,72,0.6);
+  }
+
+  h1 {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: clamp(40px, 7vw, 72px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.92;
+    color: var(--txt);
+  }
+
+  h1 .accent {
+    color: var(--accent-active);
+    font-style: italic;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--sp3);
+    margin-top: var(--sp1);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--txt3);
+  }
+  .header-meta .dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--b3);
+  }
+  .header-meta .meta-strong { color: var(--txt2); }
+
+  /* ── NAME PICKER ── */
+  #name-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 58vh;
+    gap: var(--sp5);
+    animation: fadein 0.3s ease;
+  }
+
+  .picker-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--txt3);
+  }
+
+  .name-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp2);
+  }
+
+  .name-btn {
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    color: var(--txt);
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    padding: var(--sp6) 52px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    gap: var(--sp2);
+    border-radius: var(--radius);
+  }
+
+  .name-btn:hover {
+    border-color: var(--pc);
+    background: var(--s2);
+    transform: translateY(-2px);
+  }
+
+  .nbdot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--pc);
+    flex-shrink: 0;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    margin-bottom: var(--sp5);
+    gap: var(--sp5);
+    flex-wrap: wrap;
+    padding: var(--sp4);
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    border-radius: var(--radius);
+  }
+
+  .who-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp3);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .who-line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp2);
+  }
+
+  .editing-as {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--txt3);
+  }
+
+  .who-name {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--current-color, var(--accent));
+    letter-spacing: -0.02em;
+  }
+
+  .switch-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt3);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: border-color 0.12s, color 0.12s;
+    margin-left: var(--sp2);
+  }
+  .switch-btn:hover { border-color: var(--b3); color: var(--txt); }
+
+  .actions-block {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp2);
+    min-width: 130px;
+  }
+
+  .save-btn {
+    background: var(--accent-active);
+    border: none;
+    color: #000;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 11px var(--sp5);
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+    position: relative;
+    overflow: hidden;
+  }
+  .save-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,0.08); }
+  .save-btn:active { transform: translateY(0); }
+  .save-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+  .save-btn.dirty {
+    background: var(--dennis);
+    color: #000;
+    animation: dirtypulse 2s ease-in-out infinite;
+  }
+  @keyframes dirtypulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(24,204,72,0.0); }
+    50%      { box-shadow: 0 0 0 4px rgba(24,204,72,0.18); }
+  }
+
+  /* ── AVATARS — fill-density bar per teammate ── */
+  .avatars {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--sp2);
+  }
+
+  .avatar {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--txt3);
+    transition: color 0.2s;
+    padding: 6px 8px;
+    background: var(--s2);
+    border: 1px solid var(--b1);
+    border-radius: var(--radius);
+    min-width: 0;
+  }
+  .avatar { cursor: pointer; }
+  .avatar:hover { border-color: var(--b3); }
+  .avatar.loaded { color: var(--txt2); }
+  .avatar.is-me { border-color: var(--acolor); background: var(--bg); }
+  .avatar.is-filtered {
+    background: var(--acolor);
+    color: #000;
+    border-color: var(--acolor);
+  }
+  .avatar.is-filtered .avatar-name,
+  .avatar.is-filtered .avatar-count { color: #000; }
+  .avatar.is-filtered .avatar-pip { background: #000; border-color: #000; box-shadow: none; }
+  .avatar.is-filtered .avatar-bar { background: rgba(0,0,0,0.25); }
+  .avatar.is-filtered .avatar-bar-fill { background: #000; }
+
+  .avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .avatar-pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--b3);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .avatar.loaded .avatar-pip {
+    background: var(--acolor);
+    border-color: var(--acolor);
+    box-shadow: 0 0 6px var(--acolor);
+  }
+  .avatar-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .avatar-count {
+    color: var(--txt3);
+    font-size: 8px;
+    letter-spacing: 0.05em;
+  }
+  .avatar.loaded .avatar-count { color: var(--acolor); }
+
+  .avatar-bar {
+    height: 3px;
+    background: var(--b1);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .avatar-bar-fill {
+    height: 100%;
+    background: var(--acolor);
+    width: var(--fill, 0%);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 2px;
+  }
+
+  /* ── STATUS ── */
+  .status-bar {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--txt3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #18cc48;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: var(--sp4);
+    width: fit-content;
+    padding: 3px;
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    border-radius: var(--radius);
+  }
+
+  .tab {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: var(--sp2) var(--sp4);
+    background: transparent;
+    border: none;
+    color: var(--txt3);
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: var(--radius);
+  }
+  .tab.active {
+    background: var(--accent-active);
+    color: #000;
+    font-weight: 600;
+  }
+  .tab:not(.active):hover { color: var(--txt); background: var(--s2); }
+
+  /* ── BEST SLOT — quiet caption ── */
+  .best-slot {
+    display: none;
+    margin-top: var(--sp4);
+    font-family: 'Geist', sans-serif;
+    font-size: 12px;
+    color: var(--txt3);
+    letter-spacing: 0;
+  }
+  .best-slot.show { display: block; }
+  .best-slot .best-label { color: var(--txt3); }
+  .best-slot .best-time { color: var(--txt); }
+  .best-slot .best-detail { color: var(--txt3); margin-left: 6px; }
+
+  /* ── DRAG HINT + GRID ACTIONS ── */
+  .grid-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp3);
+    margin-bottom: var(--sp3);
+    flex-wrap: wrap;
+  }
+  .drag-hint {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--txt3);
+    margin: 0;
+  }
+  .copy-last-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt2);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+  }
+  .copy-last-btn:hover {
+    border-color: var(--b3);
+    color: var(--txt);
+    background: var(--s2);
+  }
+  .drag-hint kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    background: var(--s2);
+    border: 1px solid var(--b2);
+    border-radius: 2px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    color: var(--txt2);
+    margin: 0 3px;
+  }
+
+  /* ── GRID — minimal ledger ── */
+  .grid-wrap { overflow-x: auto; }
+
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 56px repeat(7, 1fr);
+    gap: 0;
+    min-width: 560px;
+    border-top: 1px solid var(--b1);
+    border-left: 1px solid var(--b1);
+    position: relative;
+  }
+
+  /* White frame around today's column when on the current week */
+  .today-frame {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(56px + var(--today-col, 0) * ((100% - 56px) / 7));
+    width: calc((100% - 56px) / 7);
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .day-header {
+    text-align: left;
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-right: 1px solid var(--b1);
+    border-bottom: 1px solid var(--b1);
+  }
+  .day-header:first-child { border-right: 1px solid var(--b1); }
+
+  .day-name {
+    font-family: 'Geist', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--txt2);
+    text-transform: none;
+  }
+  .day-header.is-today .day-name { color: var(--txt); font-weight: 600; }
+
+  /* Focus today — dim non-today columns when on the current week */
+  .day-header,
+  .slot {
+    transition: opacity 0.3s ease;
+  }
+  .day-header.is-other-day,
+  .slot.is-other-day {
+    opacity: 0.32;
+  }
+
+  .day-date {
+    font-family: 'Geist', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--txt3);
+    letter-spacing: 0;
+  }
+  .day-header.is-today .day-date { color: var(--txt2); }
+
+  .time-label {
+    font-family: 'Geist', sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--txt3);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 4px 10px 0 0;
+    height: 32px;
+    letter-spacing: 0;
+    border-right: 1px solid var(--b1);
+    border-bottom: 1px solid transparent;
+  }
+  .time-label.half { color: transparent; }
+
+  .slot {
+    height: 32px;
+    background: transparent;
+    border-right: 1px solid var(--b1);
+    border-bottom: 1px solid var(--b1);
+    cursor: pointer;
+    transition: background 0.1s ease;
+    position: relative;
+  }
+  .slot:hover { background: rgba(255,255,255,0.03); }
+
+  .slot.mine {
+    background: var(--current-color, var(--accent));
+    opacity: 0.95;
+  }
+  .slot.mine:hover { opacity: 1; }
+
+  /* Team view heatmap
+     1 — just dot, no fill
+     2+ — bold green (the team threshold — readable across the screen)
+     3 — same bold green, slightly brighter
+     4 — animated aurora + corner sparkle */
+  .slot[data-count="1"] { background: transparent; }
+
+  .slot[data-count="2"] {
+    background: rgba(24, 204, 72, 0.42);
+  }
+
+  .slot[data-count="3"] {
+    background: rgba(24, 204, 72, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(120, 255, 160, 0.45);
+  }
+
+  .slot[data-count="4"] {
+    background: rgba(24, 204, 72, 0.65);
+    box-shadow: inset 0 0 0 1px rgba(120, 255, 160, 0.7);
+  }
+
+  .slot[data-count="5"] {
+    background: linear-gradient(115deg,
+      rgba(255, 105, 180, 0.24) 0%,
+      rgba(255, 200, 80, 0.24) 25%,
+      rgba(120, 220, 140, 0.24) 50%,
+      rgba(120, 180, 255, 0.24) 75%,
+      rgba(179, 110, 247, 0.24) 100%);
+    background-size: 280% 280%;
+    animation: aurora 5s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+  }
+  .slot[data-count="5"]::before {
+    content: '✨';
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    font-size: 10px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+    animation: sparkle-bob 1.8s ease-in-out infinite;
+    text-shadow: 0 0 6px rgba(255, 220, 120, 0.7);
+  }
+  .slot[data-count="5"] .slot-dots { z-index: 2; }
+
+  @keyframes aurora {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+  @keyframes sparkle-bob {
+    0%, 100% { opacity: 0.55; transform: translateY(0) scale(1); }
+    50%      { opacity: 1;    transform: translateY(-1px) scale(1.15); }
+  }
+
+  .slot-dots {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    pointer-events: none;
+  }
+
+  .slot-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+  }
+
+  /* ── TOOLTIP ── */
+  .slot-wrap { position: relative; }
+
+  .slot-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--s3);
+    border: 1px solid var(--b2);
+    padding: 5px 10px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    border-radius: var(--radius);
+    color: var(--txt2);
+  }
+  .schedule-grid[data-view="team"] .slot-wrap:hover .slot-tooltip { display: block; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: var(--sp4);
+    flex-wrap: wrap;
+    margin-top: var(--sp4);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Geist', sans-serif;
+    font-size: 11px;
+    color: var(--txt3);
+    letter-spacing: 0;
+  }
+
+  .legend-pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  .legend-swatch {
+    width: 18px; height: 10px;
+    border-radius: 1px;
+  }
+
+  .legend-sep {
+    width: 1px; height: 12px;
+    background: var(--b1);
+    margin: 0 var(--sp1);
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(70px);
+    background: var(--s2);
+    border: 1px solid var(--b2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    color: var(--txt2);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 9999;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: rgba(24,204,72,0.6); color: #18cc48; box-shadow: 0 12px 40px rgba(24,204,72,0.15); }
+  #toast.error { border-color: var(--felicia); color: var(--felicia); box-shadow: 0 12px 40px rgba(255,45,120,0.18); }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border: 1.5px solid var(--b3);
+    border-top-color: var(--accent-active);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 4px;
+  }
+
+  /* ── CONFIG ── */
+  #config-screen {
+    max-width: 420px;
+    margin: 80px auto;
+    animation: fadein 0.3s ease;
+  }
+  #config-screen h2 {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: var(--sp2);
+  }
+  #config-screen p {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--txt3);
+    line-height: 1.7;
+    margin-bottom: var(--sp5);
+  }
+  .field { margin-bottom: var(--sp3); }
+  .field label {
+    display: block;
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--txt3);
+    margin-bottom: 5px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    color: var(--txt);
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    padding: 10px var(--sp3);
+    outline: none;
+    border-radius: var(--radius);
+    transition: border-color 0.12s;
+  }
+  .field input:focus { border-color: var(--accent-active); }
+  .config-btn {
+    width: 100%;
+    background: var(--accent-active);
+    border: none;
+    color: #000;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px;
+    cursor: pointer;
+    margin-top: var(--sp2);
+    border-radius: var(--radius);
+  }
+
+
+  /* ── WEEK NAV ── */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--sp3);
+    margin-bottom: var(--sp3);
+  }
+
+  .week-nav-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt2);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 5px 14px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+  }
+  .week-nav-btn:hover { border-color: var(--b3); color: var(--txt); }
+
+  .week-nav-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--txt2);
+    letter-spacing: 0.06em;
+    min-width: 160px;
+    text-align: center;
+  }
+
+  .week-nav-label .this-week {
+    color: var(--accent);
+    font-size: 9px;
+    margin-left: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── ADMIN BTN ── */
+  .admin-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt3);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+  }
+  .admin-btn:hover { border-color: var(--b3); color: var(--txt2); }
+
+  /* ── ADMIN MODAL ── */
+  #admin-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  #admin-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  #admin-modal {
+    background: var(--s2);
+    border: 1px solid var(--b2);
+    padding: 28px;
+    width: 340px;
+    border-radius: var(--radius);
+    transform: translateY(12px);
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  #admin-overlay.visible #admin-modal {
+    transform: translateY(0);
+  }
+
+  .admin-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+
+  .admin-section {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .admin-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--txt3);
+  }
+
+  .admin-input {
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    color: var(--txt);
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    padding: 9px 12px;
+    outline: none;
+    border-radius: var(--radius);
+    width: 100%;
+    transition: border-color 0.12s;
+  }
+  .admin-input:focus { border-color: var(--accent-active); }
+
+  .admin-error {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--felicia);
+    min-height: 14px;
+  }
+
+  .admin-action-btn {
+    background: var(--accent-active);
+    border: none;
+    color: #000;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    width: 100%;
+    transition: opacity 0.12s;
+  }
+  .admin-action-btn:hover { opacity: 0.85; }
+  .admin-action-btn.danger {
+    background: transparent;
+    border: 1px solid var(--felicia);
+    color: var(--felicia);
+  }
+  .admin-action-btn.danger:hover { background: rgba(255,45,120,0.1); opacity: 1; }
+
+  .admin-cancel-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt3);
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    flex: 1;
+    transition: all 0.12s;
+  }
+  .admin-cancel-btn:hover { border-color: var(--b3); color: var(--txt2); }
+
+  /* ── WEEK NAV ── */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--sp3);
+    margin-bottom: var(--sp3);
+  }
+
+  .week-nav-btn {
+    background: var(--s2);
+    border: 1px solid var(--b2);
+    color: var(--txt2);
+    font-family: 'Geist Mono', monospace;
+    font-size: 14px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .week-nav-btn:hover { border-color: var(--b3); color: var(--txt); }
+
+  .week-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--txt2);
+    letter-spacing: 0.06em;
+    min-width: 160px;
+    text-align: center;
+  }
+
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.25; }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .main-view { animation: fadein 0.25s ease; }
+
+  /* ── PASSCODE GATE ── */
+  #passcode-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    animation: fadein 0.3s ease;
+  }
+  .lock-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp3);
+    width: 100%;
+    max-width: 320px;
+  }
+  .lock-icon {
+    width: 28px; height: 28px;
+    border: 1.5px solid var(--txt3);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    color: var(--txt3);
+    margin-bottom: var(--sp2);
+  }
+  .lock-title {
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: var(--sp1);
+  }
+  .lock-sub {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--txt3);
+    margin-bottom: var(--sp4);
+  }
+  .passcode-input {
+    width: 100%;
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    color: var(--txt);
+    font-family: 'Geist Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 0.25em;
+    text-align: center;
+    padding: 14px;
+    outline: none;
+    border-radius: var(--radius);
+    transition: border-color 0.12s;
+  }
+  .passcode-input:focus { border-color: var(--accent-active); }
+  .passcode-error {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    color: var(--felicia);
+    min-height: 14px;
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+  .passcode-btn {
+    width: 100%;
+    background: var(--accent-active);
+    border: none;
+    color: #000;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 14px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: opacity 0.12s, transform 0.12s;
+  }
+  .passcode-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  /* ── WEEK NAV (consolidated) ── */
+  .week-label-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--txt2);
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    min-width: 170px;
+    text-align: center;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+  }
+  .week-label-btn:hover { border-color: var(--b2); color: var(--txt); }
+  .week-label-btn .current-badge {
+    color: var(--accent);
+    margin-left: 6px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .week-today-btn {
+    background: transparent;
+    border: 1px solid var(--b2);
+    color: var(--txt3);
+    font-family: 'Geist Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.12s;
+    margin-left: var(--sp2);
+  }
+  .week-today-btn:hover { border-color: var(--b3); color: var(--txt2); }
+  .week-today-btn.hidden { display: none; }
+  .week-today-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--txt);
+  }
+  .week-today-btn.active:hover { background: rgba(255, 255, 255, 0.15); }
+
+  .week-picker-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px; height: 1px;
+    left: 50%;
+  }
+
+  /* ── MOBILE DAY-VIEW ── */
+  .mobile-day-view { display: none; }
+
+  .day-pills {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: var(--sp3);
+  }
+  .day-pill {
+    padding: 8px 4px;
+    background: transparent;
+    border: 1px solid var(--b1);
+    border-radius: var(--radius);
+    font-family: 'Geist', sans-serif;
+    color: var(--txt2);
+    cursor: pointer;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: all 0.15s;
+    min-width: 0;
+  }
+  .day-pill:active { transform: scale(0.96); }
+  .day-pill .pill-day {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .day-pill .pill-date {
+    font-size: 10px;
+    color: var(--txt3);
+  }
+  .day-pill .pill-mark {
+    height: 3px;
+    margin-top: 4px;
+    border-radius: 2px;
+    background: transparent;
+  }
+  .day-pill[data-max="2"] .pill-mark { background: rgba(24,204,72,0.42); }
+  .day-pill[data-max="3"] .pill-mark { background: rgba(24,204,72,0.7); }
+  .day-pill[data-max="4"] .pill-mark { background: linear-gradient(90deg, rgba(255,105,180,0.6), rgba(255,200,80,0.6), rgba(120,220,140,0.6)); }
+  .day-pill[data-max="5"] .pill-mark { background: linear-gradient(90deg, rgba(255,105,180,0.7), rgba(255,200,80,0.7), rgba(120,220,140,0.7), rgba(120,180,255,0.7), rgba(179,110,247,0.7)); }
+  .day-pill.is-today .pill-day { color: var(--dennis); }
+  .day-pill.has-mine .pill-date { color: var(--current-color, var(--txt2)); }
+  .day-pill.selected {
+    background: rgba(255,255,255,0.07);
+    border-color: var(--b3);
+    color: var(--txt);
+  }
+  .day-pill.selected .pill-day { color: var(--txt); }
+
+  .day-list {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--b1);
+    border-left: 1px solid var(--b1);
+    border-right: 1px solid var(--b1);
+    border-radius: var(--radius);
+  }
+
+  .day-row {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    min-height: 44px;
+    border-bottom: 1px solid var(--b1);
+    align-items: stretch;
+    transition: background 0.15s;
+  }
+  .day-row.hour-start { border-top: 1px solid var(--b2); }
+  .day-row .row-time {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 12px;
+    font-family: 'Geist', sans-serif;
+    font-size: 11px;
+    color: var(--txt3);
+    border-right: 1px solid var(--b1);
+  }
+  .day-row .row-cell {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .day-row.mine .row-cell {
+    background: var(--current-color, var(--accent));
+    opacity: 0.9;
+  }
+  /* Team view heatmap on mobile rows */
+  .day-row[data-count="2"] .row-cell { background: rgba(24,204,72,0.42); }
+  .day-row[data-count="3"] .row-cell { background: rgba(24,204,72,0.55); box-shadow: inset 3px 0 0 rgba(120,255,160,0.6); }
+  .day-row[data-count="4"] .row-cell { background: rgba(24,204,72,0.65); box-shadow: inset 3px 0 0 rgba(120,255,160,0.85); }
+  .day-row[data-count="5"] .row-cell {
+    background: linear-gradient(115deg,
+      rgba(255,105,180,0.24) 0%,
+      rgba(255,200,80,0.24) 25%,
+      rgba(120,220,140,0.24) 50%,
+      rgba(120,180,255,0.24) 75%,
+      rgba(179,110,247,0.24) 100%);
+    background-size: 280% 280%;
+    animation: aurora 5s ease-in-out infinite;
+  }
+  .day-row[data-count="5"] .row-cell::after {
+    content: '✨';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    text-shadow: 0 0 8px rgba(255,220,120,0.7);
+    animation: sparkle-bob 1.8s ease-in-out infinite;
+  }
+  .day-row .row-dots {
+    display: flex;
+    gap: 5px;
+  }
+  .day-row .row-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55);
+  }
+  .day-row .row-names {
+    margin-left: auto;
+    font-family: 'Geist', sans-serif;
+    font-size: 11px;
+    color: var(--txt2);
+    letter-spacing: 0;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 720px) {
+    /* Layout */
+    .app {
+      padding: var(--sp4) var(--sp3) calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+    h1 { font-size: clamp(32px, 10vw, 52px); }
+    header { margin-bottom: var(--sp4); }
+
+    /* Topbar */
+    .topbar { flex-direction: column; padding: var(--sp3); gap: var(--sp3); }
+    .who-block { gap: var(--sp2); }
+    .actions-block { width: 100%; flex-direction: row; min-width: 0; gap: var(--sp2); }
+    .actions-block .save-btn { flex: 1; padding: 12px var(--sp3); font-size: 11px; }
+    .actions-block .admin-btn { flex-shrink: 0; padding: 12px var(--sp3); }
+
+    /* Avatars: 3-column on tablet so all 5 fit in 2 rows */
+    .avatars { grid-template-columns: repeat(3, 1fr); gap: var(--sp1); }
+    .avatar { padding: 5px 6px; }
+
+    /* Name picker: single column, full-width buttons */
+    .name-grid { grid-template-columns: 1fr; gap: var(--sp2); width: min(340px, 88vw); }
+    .name-btn { padding: var(--sp4) var(--sp4); font-size: 17px; justify-content: flex-start; }
+
+    /* Tabs: fill full width */
+    .tabs { width: 100%; }
+    .tab { flex: 1; text-align: center; }
+
+    /* Swap desktop grid for mobile day-view */
+    .grid-wrap { display: none; }
+    .mobile-day-view { display: block; }
+
+    /* Grid actions */
+    .grid-actions { margin-bottom: var(--sp2); }
+    .grid-actions .copy-last-btn { width: 100%; }
+    /* Hide desktop keyboard hint on touch devices */
+    .drag-hint { display: none; }
+
+    /* Week nav: bigger tap targets */
+    .week-nav { flex-wrap: wrap; gap: var(--sp2); margin-bottom: var(--sp3); }
+    .week-nav-btn { padding: 9px 18px; min-width: 44px; font-size: 12px; }
+    .week-label-btn { min-width: 120px; font-size: 10px; flex: 1; }
+    .week-today-btn { margin-left: 0; }
+
+    /* Day rows: tighter height so 28 slots don't scroll forever */
+    .day-row { min-height: 34px; }
+    .day-row .row-time { font-size: 10px; padding: 0 8px; }
+
+    /* Best slot */
+    .best-slot { flex-wrap: wrap; gap: var(--sp1); }
+    .best-slot .best-detail { margin-left: 0; width: 100%; }
+
+    /* Legend */
+    .legend { gap: var(--sp3); margin-top: var(--sp4); flex-wrap: wrap; }
+    .legend-item { font-size: 9px; }
+
+    /* Passcode */
+    #passcode-screen { min-height: 60vh; }
+    .lock-title { font-size: 24px; }
+
+    /* Admin modal: full width on mobile */
+    #admin-modal {
+      width: calc(100vw - 32px);
+      max-width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .app { padding-left: var(--sp2); padding-right: var(--sp2); }
+
+    /* Avatars: 2-column on phones */
+    .avatars { grid-template-columns: 1fr 1fr; }
+
+    /* Day pills */
+    .day-pill { padding: 7px 2px; }
+    .day-pill .pill-day { font-size: 10px; }
+    .day-pill .pill-date { font-size: 9px; }
+
+    /* Day rows: even tighter on very small screens */
+    .day-row { grid-template-columns: 52px 1fr; min-height: 30px; }
+    .day-row .row-time { font-size: 9px; padding: 0 6px; }
+
+    /* Week nav: let label fill available space */
+    .week-label-btn { font-size: 9px; min-width: 90px; }
+    .week-nav-btn { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="wordmark">Robotics Squad / RCMRR</div>
+    <h1>Who's <span class="accent">free?</span></h1>
+    <div class="header-meta" id="header-meta">
+      <span id="meta-week">—</span>
+      <span class="dot-sep"></span>
+      <span id="meta-saved">0/5 saved</span>
+    </div>
+  </header>
+
+  <!-- PASSCODE GATE -->
+  <div id="passcode-screen" style="display:none">
+    <div class="lock-wrap">
+      <div class="lock-icon">⬢</div>
+      <p class="lock-sub">Squad access</p>
+      <h2 class="lock-title">Enter passcode</h2>
+      <input type="password" id="passcode-input" class="passcode-input" placeholder="••••••••" autocomplete="off">
+      <div id="passcode-error" class="passcode-error"></div>
+      <button class="passcode-btn" onclick="unlockSite()">Unlock →</button>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="config-screen" style="display:none">
+    <h2>Setup</h2>
+    <p>Connect to Google Sheets for real-time sync. One-time only.</p>
+    <div class="field"><label>Sheet ID</label><input type="text" id="sheet-id"></div>
+    <div class="field"><label>API Key</label><input type="text" id="api-key"></div>
+    <button class="config-btn" onclick="saveConfig()">Continue →</button>
+  </div>
+
+  <!-- NAME PICKER -->
+  <div id="name-picker" style="display:none">
+    <p class="picker-label">Who are you?</p>
+    <div class="name-grid">
+      <button class="name-btn" onclick="selectName('Dennis')" style="--pc:var(--dennis)">
+        <span class="nbdot" style="background:var(--dennis)"></span>Dennis
+      </button>
+      <button class="name-btn" onclick="selectName('Felicia')" style="--pc:var(--felicia)">
+        <span class="nbdot" style="background:var(--felicia)"></span>Felicia
+      </button>
+      <button class="name-btn" onclick="selectName('Dominic')" style="--pc:var(--dominic)">
+        <span class="nbdot" style="background:var(--dominic)"></span>Dominic
+      </button>
+      <button class="name-btn" onclick="selectName('Jerry')" style="--pc:var(--jerry)">
+        <span class="nbdot" style="background:var(--jerry)"></span>Jerry
+      </button>
+      <button class="name-btn" onclick="selectName('Houman')" style="--pc:var(--houman)">
+        <span class="nbdot" style="background:var(--houman)"></span>Houman
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div id="main-view" class="main-view" style="display:none">
+    <div class="topbar">
+      <div class="who-block">
+        <div class="who-line">
+          <span class="editing-as">Editing as</span>
+          <span class="who-name" id="who-label"></span>
+          <button class="switch-btn" onclick="switchUser()">Switch</button>
+        </div>
+        <div class="avatars" id="team-avatars"></div>
+        <div class="status-bar" id="save-status"></div>
+      </div>
+      <div class="actions-block">
+        <button class="save-btn" id="save-btn" onclick="saveAvailability()">Save</button>
+        <button class="admin-btn" onclick="openAdmin()">⚙ Admin</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-mine" onclick="switchTab('mine')">My Schedule</button>
+      <button class="tab" id="tab-team" onclick="switchTab('team')">Team View</button>
+    </div>
+
+    <div class="week-nav">
+      <button class="week-nav-btn" onclick="changeWeek(-1)" title="Previous week">←</button>
+      <button class="week-label-btn" id="week-label-btn" onclick="openWeekPicker()" title="Pick a week"><span id="week-nav-label"></span></button>
+      <button class="week-nav-btn" onclick="changeWeek(1)" title="Next week">→</button>
+      <button class="week-today-btn hidden" id="week-today-btn" onclick="goToToday()">Today</button>
+      <input type="date" id="week-picker" class="week-picker-input" onchange="jumpToWeek(this.value)">
+    </div>
+    <div class="grid-actions">
+      <p class="drag-hint" id="drag-hint">Click or drag to toggle. <kbd>Shift</kbd>+drag to erase.</p>
+      <button class="copy-last-btn" id="copy-last-btn" onclick="copyFromLastWeek()" style="display:none">Copy from last week ↩</button>
+    </div>
+
+    <div class="grid-wrap">
+      <div class="schedule-grid" id="schedule-grid"></div>
+    </div>
+
+    <!-- Mobile: day pills + vertical day list (hidden on desktop) -->
+    <div class="mobile-day-view" id="mobile-day-view">
+      <div class="day-pills" id="day-pills"></div>
+      <div class="day-list" id="day-list"></div>
+    </div>
+
+    <div class="best-slot" id="best-slot">
+      <span class="best-label">Best overlap:</span>
+      <span class="best-time" id="best-time"></span>
+      <span class="best-detail" id="best-detail"></span>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="admin-overlay" style="display:none">
+  <div id="admin-modal">
+    <div class="admin-title">Admin Panel</div>
+    <div class="admin-section">
+      <div class="admin-label">Password</div>
+      <input type="password" id="admin-pw" class="admin-input" placeholder="Enter password">
+      <div id="admin-error" class="admin-error"></div>
+    </div>
+    <div id="admin-controls" style="display:none">
+      <div class="admin-section">
+        <div class="admin-label">Reset current week's data</div>
+        <button class="admin-action-btn danger" onclick="adminReset()">Reset Everyone This Week</button>
+      </div>
+    </div>
+    <div id="admin-success" style="display:none;font-family:'Geist Mono',monospace;font-size:12px;color:#18cc48;padding:16px 0;text-align:center;letter-spacing:0.08em;"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="admin-action-btn" onclick="adminAuth()" id="admin-auth-btn">Unlock</button>
+      <button class="admin-cancel-btn" onclick="closeAdmin()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── ERROR OVERLAY (debug) ────────────────────────────────────────────────────
+// Surface any uncaught JS error visibly. Helps debug iOS-specific issues where
+// a thrown error otherwise silently breaks the entire page.
+function showErr(label, msg) {
+  try {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff2d78;color:#fff;padding:10px 14px;z-index:99999;font-size:11px;font-family:monospace;white-space:pre-wrap;line-height:1.4;max-height:50vh;overflow:auto;';
+    div.textContent = '[' + label + '] ' + msg;
+    (document.body || document.documentElement).appendChild(div);
+  } catch (_) {}
+}
+window.addEventListener('error', (e) => {
+  showErr('error', (e.message || 'unknown') + ' @ ' + (e.filename || '?') + ':' + (e.lineno || '?') + ':' + (e.colno || '?'));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e.reason;
+  showErr('promise', r && (r.message || r.toString) ? (r.message || r.toString()) : String(r));
+});
+
+// ── SAFE STORAGE ────────────────────────────────────────────────────────────
+// iOS Safari can throw SecurityError on localStorage in some privacy modes /
+// embedded contexts. Wrapping every access so a single throw doesn't kill the
+// entire script (which would silently break every onclick on the page).
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+const lsDel = (k) => { try { localStorage.removeItem(k); } catch (_) {} };
+
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+// Change this to set the squad passcode. Anyone with this code can access the site.
+const SITE_PASSCODE = '520';
+// Bump this whenever you change the passcode to force everyone to re-enter it.
+const PASSCODE_VERSION = '2';
+
+const NAMES = ['Dennis', 'Felicia', 'Dominic', 'Jerry', 'Houman'];
+const COLORS = { Dennis: '#18cc48', Felicia: '#ff2d78', Dominic: '#6b9fff', Jerry: '#ff7a00', Houman: '#ebc91e' };
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// 8am = 08:00 → 10pm = 22:00, 30-min slots = 28 slots
+const START_HOUR = 8;
+const END_HOUR = 22;
+const SLOTS_PER_DAY = (END_HOUR - START_HOUR) * 2; // 28
+
+let sheetId = '1ZMjDN-vsFDabM4MzVnz-VzvpG9wKLxICaC8nkqNMQS4';
+let apiKey = 'AIzaSyD2kbl6HiByAliXhqst1-yVl9mSvqacKWo';
+let currentUser = null;
+let activeWeek = getWeekKey(); // currently viewed week
+let allSheetData = []; // cache of all rows from sheet
+let currentTab = 'mine';
+let teamData = {}; // { Dennis: { "Mon-0": true, ... }, ... }
+let myData = {};
+let isDragging = false;
+let dragValue = null; // true = painting, false = erasing
+let focusToday = lsGet('rs_focus_today') === 'true'; // dim + frame when on current week
+let lastSavedAt = null;        // ms timestamp of last successful save (this user)
+let lastFetchAt = null;        // ms timestamp of last successful fetch
+let saveTimer = null;          // debounced auto-save timer
+let pollTimer = null;          // polling interval handle
+let teamFilter = null;         // null = show all in team view; "Dennis" etc = filter
+let mobileDay = parseInt(lsGet('rs_mobile_day') || '-1'); // 0..6, -1 = needs init
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+function init() {
+  sheetId = lsGet('rs_sheet_id') || '';
+  apiKey = lsGet('rs_api_key') || '';
+
+  // Gate 1: passcode (versioned — bumping PASSCODE_VERSION invalidates old auths)
+  if (lsGet('rs_authed_v') !== PASSCODE_VERSION) {
+    show('passcode-screen');
+    setTimeout(() => document.getElementById('passcode-input').focus(), 50);
+    return;
+  }
+  // Gate 2: remembered user → straight into main view
+  const savedUser = lsGet('rs_current_user');
+  if (savedUser && NAMES.includes(savedUser)) {
+    selectName(savedUser);
+    return;
+  }
+  show('name-picker');
+}
+
+function show(id) {
+  ['passcode-screen','config-screen','name-picker','main-view'].forEach(i => {
+    document.getElementById(i).style.display = i === id ? '' : 'none';
+  });
+}
+
+function unlockSite() {
+  const input = document.getElementById('passcode-input');
+  const err = document.getElementById('passcode-error');
+  if (input.value === SITE_PASSCODE) {
+    lsSet('rs_authed_v', PASSCODE_VERSION);
+    err.textContent = '';
+    init();
+  } else {
+    err.textContent = 'Wrong passcode.';
+    input.value = '';
+    input.focus();
+  }
+}
+
+function saveConfig() {
+  sheetId = document.getElementById('sheet-id').value.trim();
+  apiKey = document.getElementById('api-key').value.trim();
+  if (!sheetId || !apiKey) { showToast('Fill in both fields', true); return; }
+  lsSet('rs_sheet_id', sheetId);
+  lsSet('rs_api_key', apiKey);
+  show('name-picker');
+}
+
+async function selectName(name) {
+  currentUser = name;
+  lsSet('rs_current_user', name);
+  document.getElementById('who-label').textContent = name;
+  document.documentElement.style.setProperty('--current-color', COLORS[name]);
+  show('main-view');
+  // Restore saved week if valid YYYY-MM-DD, else default to current week
+  const savedWeek = lsGet('rs_active_week');
+  activeWeek = (savedWeek && /^\d{4}-\d{2}-\d{2}$/.test(savedWeek)) ? savedWeek : getWeekKey();
+  // Restore saved tab
+  const savedTab = lsGet('rs_current_tab');
+  if (savedTab === 'team' || savedTab === 'mine') currentTab = savedTab;
+  buildGrid();
+  updateWeekNav();
+  // Sync tab UI without triggering an unwanted re-render before data loads
+  document.getElementById('tab-mine').classList.toggle('active', currentTab === 'mine');
+  document.getElementById('tab-team').classList.toggle('active', currentTab === 'team');
+  document.getElementById('drag-hint').style.display = currentTab === 'mine' ? '' : 'none';
+  document.getElementById('save-btn').style.display = currentTab === 'mine' ? '' : 'none';
+  document.getElementById('schedule-grid').dataset.view = currentTab;
+  await loadAllData();
+}
+
+function switchUser() {
+  currentUser = null;
+  lsDel('rs_current_user');
+  show('name-picker');
+}
+
+// ── COPY FROM LAST WEEK ──────────────────────────────────────────────────────
+function copyFromLastWeek() {
+  if (!currentUser) return;
+  const lastWeek = offsetWeek(activeWeek, -7);
+  const row = allSheetData.find(r =>
+    String(r[0]).trim() === currentUser && normalizeWeek(r[1]) === lastWeek
+  );
+  if (!row) {
+    showToast('No data from last week', true);
+    return;
+  }
+  let colIdx = 2;
+  let any = false;
+  for (let d = 0; d < 7; d++) {
+    for (let s = 0; s < SLOTS_PER_DAY; s++) {
+      const v = String(row[colIdx] || '0').trim() === '1';
+      myData[slotKey(d, s)] = v;
+      if (v) any = true;
+      colIdx++;
+    }
+  }
+  if (!any) { showToast('Last week was empty', true); return; }
+  renderGrid();
+  markDirty(); // triggers auto-save + tab title + avatars
+  showToast('Copied from last week');
+}
+
+function refreshCopyLastBtn() {
+  const btn = document.getElementById('copy-last-btn');
+  if (!btn) return;
+  // Only on My Schedule, only when current week empty for me, and only when last week has data
+  const empty = !Object.values(myData).some(v => v);
+  const onMine = currentTab === 'mine';
+  const lastWeek = offsetWeek(activeWeek, -7);
+  const lastWeekRow = allSheetData.find(r =>
+    String(r[0]).trim() === currentUser && normalizeWeek(r[1]) === lastWeek
+  );
+  const lastHadData = lastWeekRow && lastWeekRow.slice(2).some(v => String(v).trim() === '1');
+  btn.style.display = (onMine && empty && lastHadData) ? '' : 'none';
+}
+
+// ── TIME HELPERS ─────────────────────────────────────────────────────────────
+function slotKey(dayIdx, slotIdx) { return `${dayIdx}-${slotIdx}`; }
+
+function slotLabel(slotIdx) {
+  const totalMins = START_HOUR * 60 + slotIdx * 30;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12 = h > 12 ? h - 12 : h;
+  return `${h12}:${m === 0 ? '00' : '30'}${ampm}`;
+}
+
+// ── GRID BUILD ───────────────────────────────────────────────────────────────
+function getWeekDates() {
+  const monday = new Date(activeWeek + 'T12:00:00');
+  return Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.getDate() + ' ' + d.toLocaleString('en', {month: 'short'});
+  });
+}
+
+function getTodayDayIndex() {
+  // Returns Mon=0..Sun=6 if active week is current week, else -1
+  if (activeWeek !== getWeekKey()) return -1;
+  const today = new Date();
+  const d = today.getDay();
+  return d === 0 ? 6 : d - 1;
+}
+
+function buildGrid() {
+  const grid = document.getElementById('schedule-grid');
+  grid.innerHTML = '';
+  grid.dataset.view = currentTab;
+  const weekDates = getWeekDates();
+  const todayIdx = getTodayDayIndex();
+  const focusActive = focusToday && todayIdx >= 0;
+
+  // Header row
+  grid.appendChild(Object.assign(document.createElement('div'), { className: 'day-header' }));
+  DAYS.forEach((d, di) => {
+    const el = document.createElement('div');
+    el.className = 'day-header'
+      + (di === todayIdx ? ' is-today' : '')
+      + (focusActive && di !== todayIdx ? ' is-other-day' : '');
+    el.innerHTML = `<span class="day-name">${d}</span><span class="day-date">${weekDates[di]}</span>`;
+    grid.appendChild(el);
+  });
+
+  // Slot rows
+  for (let s = 0; s < SLOTS_PER_DAY; s++) {
+    const isHour = s % 2 === 0;
+    const timeEl = document.createElement('div');
+    timeEl.className = 'time-label' + (isHour ? '' : ' half');
+    timeEl.textContent = isHour ? slotLabel(s) : '';
+    grid.appendChild(timeEl);
+
+    for (let d = 0; d < 7; d++) {
+      const key = slotKey(d, s);
+      const wrap = document.createElement('div');
+      wrap.className = 'slot-wrap';
+
+      const slot = document.createElement('div');
+      slot.className = 'slot'
+        + (s % 2 === 0 ? ' hour-start' : '')
+        + (focusActive && d !== todayIdx ? ' is-other-day' : '');
+      slot.dataset.key = key;
+      slot.dataset.day = d;
+      slot.dataset.slot = s;
+
+      // Tooltip (for team view)
+      const tip = document.createElement('div');
+      tip.className = 'slot-tooltip';
+      tip.id = `tip-${key}`;
+      wrap.appendChild(slot);
+      wrap.appendChild(tip);
+      grid.appendChild(wrap);
+
+      // Mouse events for drag-painting
+      slot.addEventListener('mousedown', e => {
+        e.preventDefault();
+        isDragging = true;
+        // Shift = always erase
+        dragValue = e.shiftKey ? false : !myData[key];
+        toggleSlot(key, slot);
+      });
+      slot.addEventListener('mouseenter', () => {
+        if (isDragging) toggleSlot(key, slot);
+      });
+      // Touch support
+      slot.addEventListener('touchstart', e => {
+        if (currentTab !== 'mine') return;
+        e.preventDefault();
+        isDragging = true;
+        dragValue = !myData[key];
+        toggleSlot(key, slot);
+      }, { passive: false });
+    }
+  }
+
+  // Today frame — only when focus is active
+  if (focusActive) {
+    grid.style.setProperty('--today-col', String(todayIdx));
+    const frame = document.createElement('div');
+    frame.className = 'today-frame';
+    grid.appendChild(frame);
+  } else {
+    grid.style.removeProperty('--today-col');
+  }
+
+  buildLegend();
+  buildMobileGrid();
+}
+
+function isDirty() {
+  if (!currentUser) return false;
+  const saved = teamData[currentUser] || {};
+  for (let d = 0; d < 7; d++) {
+    for (let s = 0; s < SLOTS_PER_DAY; s++) {
+      const k = slotKey(d, s);
+      if (!!myData[k] !== !!saved[k]) return true;
+    }
+  }
+  return false;
+}
+
+// ── MOBILE DAY-VIEW ──────────────────────────────────────────────────────────
+function ensureMobileDay() {
+  if (!Number.isInteger(mobileDay) || mobileDay < 0 || mobileDay > 6) {
+    const todayIdx = getTodayDayIndex();
+    mobileDay = (todayIdx >= 0) ? todayIdx : 0;
+  }
+}
+
+function buildMobileGrid() {
+  ensureMobileDay();
+  buildDayPills();
+  buildDayList();
+}
+
+function buildDayPills() {
+  const el = document.getElementById('day-pills');
+  if (!el) return;
+  const weekDates = getWeekDates();
+  const todayIdx = getTodayDayIndex();
+  el.innerHTML = DAYS.map((d, di) => {
+    const isToday = di === todayIdx;
+    const isSelected = di === mobileDay;
+    const dateOnly = weekDates[di].split(' ')[0];
+    return `<button class="day-pill ${isSelected ? 'selected' : ''} ${isToday ? 'is-today' : ''}" onclick="selectMobileDay(${di})">
+      <span class="pill-day">${d}</span>
+      <span class="pill-date">${dateOnly}</span>
+      <span class="pill-mark"></span>
+    </button>`;
+  }).join('');
+}
+
+function buildDayList() {
+  const list = document.getElementById('day-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (let s = 0; s < SLOTS_PER_DAY; s++) {
+    const isHour = s % 2 === 0;
+    const row = document.createElement('div');
+    row.className = 'day-row' + (isHour ? ' hour-start' : '');
+    const key = slotKey(mobileDay, s);
+    row.dataset.key = key;
+    row.dataset.day = mobileDay;
+    row.dataset.slot = s;
+    row.innerHTML = `
+      <div class="row-time">${isHour ? slotLabel(s) : ''}</div>
+      <div class="row-cell"></div>
+    `;
+    list.appendChild(row);
+    const cell = row.querySelector('.row-cell');
+    // Tap to toggle (My Schedule), tap to nothing (Team View)
+    cell.addEventListener('click', () => toggleMobileSlot(key, row));
+  }
+}
+
+function selectMobileDay(di) {
+  mobileDay = di;
+  lsSet('rs_mobile_day', String(di));
+  buildDayPills();
+  buildDayList();
+  renderMobileGrid();
+}
+
+function toggleMobileSlot(key, row) {
+  if (currentTab !== 'mine') return;
+  myData[key] = !myData[key];
+  const isMine = !!myData[key];
+  row.classList.toggle('mine', isMine);
+  const cell = row.querySelector('.row-cell');
+  if (cell) {
+    cell.style.background = isMine && currentUser ? COLORS[currentUser] : '';
+    cell.style.opacity = isMine ? '0.9' : '';
+  }
+  markDirty();
+}
+
+function renderMobileGrid() {
+  if (currentTab === 'mine') renderMobileMine();
+  else renderMobileTeam();
+  // Update pill heatmap markers (team view) and "has-mine" state (mine view)
+  updateDayPillsMeta();
+}
+
+function renderMobileMine() {
+  const myColor = currentUser ? COLORS[currentUser] : null;
+  document.querySelectorAll('.day-row').forEach(row => {
+    const key = row.dataset.key;
+    const isMine = !!myData[key];
+    row.classList.toggle('mine', isMine);
+    row.removeAttribute('data-count');
+    const cell = row.querySelector('.row-cell');
+    cell.style.background = isMine && myColor ? myColor : '';
+    cell.style.opacity = isMine ? '0.9' : '';
+    cell.style.boxShadow = '';
+    const dots = cell.querySelector('.row-dots');
+    if (dots) dots.remove();
+    const names = cell.querySelector('.row-names');
+    if (names) names.remove();
+  });
+}
+
+function renderMobileTeam() {
+  // Filtered case
+  if (teamFilter) {
+    const data = effectiveData(teamFilter);
+    document.querySelectorAll('.day-row').forEach(row => {
+      const key = row.dataset.key;
+      row.classList.remove('mine');
+      row.removeAttribute('data-count');
+      const cell = row.querySelector('.row-cell');
+      cell.style.background = '';
+      cell.style.opacity = '';
+      cell.style.boxShadow = '';
+      const oldDots = cell.querySelector('.row-dots');
+      if (oldDots) oldDots.remove();
+      const oldNames = cell.querySelector('.row-names');
+      if (oldNames) oldNames.remove();
+      if (data[key]) {
+        cell.style.background = COLORS[teamFilter];
+        cell.style.opacity = '0.85';
+      }
+    });
+    return;
+  }
+
+  document.querySelectorAll('.day-row').forEach(row => {
+    const key = row.dataset.key;
+    row.classList.remove('mine');
+    const cell = row.querySelector('.row-cell');
+    cell.style.background = '';
+    cell.style.opacity = '';
+    cell.style.boxShadow = '';
+    const oldDots = cell.querySelector('.row-dots');
+    if (oldDots) oldDots.remove();
+    const oldNames = cell.querySelector('.row-names');
+    if (oldNames) oldNames.remove();
+
+    const free = NAMES.filter(n => effectiveData(n)[key]);
+    const c = free.length;
+    if (c > 0) {
+      row.dataset.count = String(c);
+      const dotsEl = document.createElement('div');
+      dotsEl.className = 'row-dots';
+      free.forEach(n => {
+        const dot = document.createElement('div');
+        dot.className = 'row-dot';
+        dot.style.background = COLORS[n];
+        dotsEl.appendChild(dot);
+      });
+      cell.appendChild(dotsEl);
+      // Names list (only if 2+, since 1 person is already a single dot)
+      if (c >= 2) {
+        const namesEl = document.createElement('div');
+        namesEl.className = 'row-names';
+        namesEl.textContent = free.join(', ');
+        cell.appendChild(namesEl);
+      }
+    } else {
+      row.removeAttribute('data-count');
+    }
+  });
+}
+
+function updateDayPillsMeta() {
+  // For each pill, compute the max count (team view) or whether I have any (mine)
+  const pills = document.querySelectorAll('.day-pill');
+  pills.forEach((pill, di) => {
+    pill.removeAttribute('data-max');
+    pill.classList.remove('has-mine');
+    const pillDate = pill.querySelector('.pill-date');
+    if (pillDate) pillDate.style.color = '';
+    if (currentTab === 'team' && !teamFilter) {
+      let maxCount = 0;
+      for (let s = 0; s < SLOTS_PER_DAY; s++) {
+        const k = slotKey(di, s);
+        const c = NAMES.filter(n => effectiveData(n)[k]).length;
+        if (c > maxCount) maxCount = c;
+      }
+      if (maxCount >= 2) pill.dataset.max = String(maxCount);
+    } else if (currentTab === 'mine') {
+      let any = false;
+      for (let s = 0; s < SLOTS_PER_DAY; s++) {
+        if (myData[slotKey(di, s)]) { any = true; break; }
+      }
+      if (any) {
+        pill.classList.add('has-mine');
+        pill.querySelector('.pill-date').style.color = currentUser ? COLORS[currentUser] : '';
+      } else {
+        pill.querySelector('.pill-date').style.color = '';
+      }
+    }
+  });
+}
+
+function markDirty() {
+  const btn = document.getElementById('save-btn');
+  const dirty = isDirty();
+  if (btn) btn.classList.toggle('dirty', dirty);
+  // Refresh avatar fill bar live as you paint
+  updateAvatars();
+  // Tab title indicates unsaved state
+  updateTabTitle();
+  // Mobile day pill markers (has-mine, max overlap)
+  updateDayPillsMeta();
+  // Auto-save: schedule debounced save when dirty
+  if (dirty) scheduleAutoSave();
+  // If user is on team view (shouldn't happen — save hidden — but defensive)
+  if (currentTab === 'team') renderTeam();
+}
+
+function updateTabTitle() {
+  document.title = (isDirty() ? '● ' : '') + 'Robotics Squad — Schedule';
+}
+
+function scheduleAutoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    if (isDirty() && currentUser) saveAvailability();
+  }, 1500);
+}
+
+function flushPendingSave() {
+  // Force any pending auto-save to fire immediately. Returns the save promise.
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (isDirty() && currentUser) return saveAvailability();
+  }
+  return Promise.resolve();
+}
+
+function toggleSlot(key, slot) {
+  if (currentTab !== 'mine') return;
+  myData[key] = dragValue;
+  const isMine = !!myData[key];
+  slot.classList.toggle('mine', isMine);
+  slot.style.background = isMine && currentUser ? COLORS[currentUser] : '';
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  lsSet('rs_current_tab', tab);
+  // Switching to My Schedule clears any avatar filter
+  if (tab === 'mine' && teamFilter) { teamFilter = null; updateAvatars(); }
+  document.getElementById('tab-mine').classList.toggle('active', tab === 'mine');
+  document.getElementById('tab-team').classList.toggle('active', tab === 'team');
+  document.getElementById('drag-hint').style.display = tab === 'mine' ? '' : 'none';
+  document.getElementById('save-btn').style.display = tab === 'mine' ? '' : 'none';
+  document.getElementById('schedule-grid').dataset.view = tab;
+  renderGrid();
+}
+
+function renderGrid() {
+  if (currentTab === 'mine') renderMine();
+  else renderTeam();
+  // Render the mobile day-view in parallel (CSS hides whichever isn't active)
+  renderMobileGrid();
+}
+
+function renderMine() {
+  const myColor = currentUser ? COLORS[currentUser] : null;
+  document.querySelectorAll('.slot').forEach(slot => {
+    const key = slot.dataset.key;
+    const isMine = !!myData[key];
+    slot.classList.toggle('mine', isMine);
+    slot.removeAttribute('data-count');
+    slot.style.background = isMine && myColor ? myColor : '';
+    slot.style.boxShadow = '';
+    slot.style.opacity = '';
+    const dots = slot.querySelector('.slot-dots');
+    if (dots) dots.remove();
+  });
+  const best = document.getElementById('best-slot');
+  if (best) best.classList.remove('show');
+}
+
+// Effective availability for a person: live myData for currentUser (so unsaved
+// paint is reflected in team view + optimal), saved teamData for everyone else.
+function effectiveData(name) {
+  return name === currentUser ? myData : (teamData[name] || {});
+}
+
+function toggleAvatarFilter(name) {
+  // Switch to team view if not already there
+  if (currentTab !== 'team') switchTab('team');
+  teamFilter = (teamFilter === name) ? null : name;
+  updateAvatars();
+  renderGrid();
+}
+
+function renderTeamFiltered(name) {
+  const data = effectiveData(name);
+  const color = COLORS[name];
+  document.querySelectorAll('.slot').forEach(slot => {
+    const key = slot.dataset.key;
+    slot.classList.remove('mine');
+    slot.style.background = '';
+    slot.style.boxShadow = '';
+    slot.style.opacity = '';
+    slot.removeAttribute('data-count');
+    const oldDots = slot.querySelector('.slot-dots');
+    if (oldDots) oldDots.remove();
+
+    if (data[key]) {
+      slot.style.background = color;
+      slot.style.opacity = '0.85';
+    }
+
+    const tip = document.getElementById(`tip-${key}`);
+    if (tip) {
+      const d = parseInt(slot.dataset.day);
+      const s = parseInt(slot.dataset.slot);
+      tip.textContent = data[key]
+        ? `${name} free — ${DAYS[d]} ${slotLabel(s)}`
+        : `${name} not free — ${DAYS[d]} ${slotLabel(s)}`;
+    }
+  });
+  // Hide best-overlap when filtered (no overlap to compute)
+  const best = document.getElementById('best-slot');
+  if (best) best.classList.remove('show');
+}
+
+function renderTeam() {
+  if (teamFilter) { renderTeamFiltered(teamFilter); return; }
+
+  // First pass: compute count per slot and find best
+  let bestCount = 0;
+  const counts = {};
+  for (let d = 0; d < 7; d++) {
+    for (let s = 0; s < SLOTS_PER_DAY; s++) {
+      const k = slotKey(d, s);
+      const c = NAMES.filter(n => effectiveData(n)[k]).length;
+      counts[k] = c;
+      if (c > bestCount) bestCount = c;
+    }
+  }
+
+  document.querySelectorAll('.slot').forEach(slot => {
+    const key = slot.dataset.key;
+    slot.classList.remove('mine');
+    slot.style.background = '';
+    slot.style.opacity = '';
+    slot.style.boxShadow = '';
+
+    const oldDots = slot.querySelector('.slot-dots');
+    if (oldDots) oldDots.remove();
+
+    const free = NAMES.filter(n => effectiveData(n)[key]);
+    const c = free.length;
+
+    if (c > 0) {
+      slot.dataset.count = String(c);
+      const dotsEl = document.createElement('div');
+      dotsEl.className = 'slot-dots';
+      free.forEach(n => {
+        const dot = document.createElement('div');
+        dot.className = 'slot-dot';
+        dot.style.background = COLORS[n];
+        dotsEl.appendChild(dot);
+      });
+      slot.appendChild(dotsEl);
+    } else {
+      slot.removeAttribute('data-count');
+    }
+
+    // Update tooltip
+    const tip = document.getElementById(`tip-${key}`);
+    if (tip) {
+      if (c === 0) {
+        tip.textContent = 'Nobody free';
+      } else {
+        const d = parseInt(slot.dataset.day);
+        const s = parseInt(slot.dataset.slot);
+        tip.textContent = `${DAYS[d]} ${slotLabel(s)} — ${free.join(', ')}`;
+      }
+    }
+  });
+
+  renderBestSlot(counts, bestCount);
+}
+
+function renderBestSlot(counts, bestCount) {
+  const el = document.getElementById('best-slot');
+  const timeEl = document.getElementById('best-time');
+  const detailEl = document.getElementById('best-detail');
+  if (!el) return;
+  if (bestCount < 2) { el.classList.remove('show'); return; }
+
+  // Find consecutive runs of best slots within the same day
+  const runs = [];
+  for (let d = 0; d < 7; d++) {
+    let runStart = -1;
+    for (let s = 0; s < SLOTS_PER_DAY; s++) {
+      if (counts[slotKey(d, s)] === bestCount) {
+        if (runStart === -1) runStart = s;
+      } else if (runStart !== -1) {
+        runs.push({ d, start: runStart, end: s });
+        runStart = -1;
+      }
+    }
+    if (runStart !== -1) runs.push({ d, start: runStart, end: SLOTS_PER_DAY });
+  }
+  if (!runs.length) { el.classList.remove('show'); return; }
+
+  // Pick the longest run; tie → earliest day
+  runs.sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.d - b.d);
+  const top = runs[0];
+  const startLabel = slotLabel(top.start);
+  const endMins = START_HOUR * 60 + top.end * 30;
+  const eh = Math.floor(endMins / 60);
+  const em = endMins % 60;
+  const ampm = eh >= 12 ? 'pm' : 'am';
+  const eh12 = eh > 12 ? eh - 12 : eh;
+  const endLabel = `${eh12}:${em === 0 ? '00' : '30'}${ampm}`;
+  const peopleWord = bestCount === 5 ? 'all 5' : `${bestCount} of 5`;
+  const moreCount = runs.length > 1 ? ` · +${runs.length - 1} more` : '';
+
+  timeEl.textContent = `${DAY_FULL[top.d]} ${startLabel}–${endLabel}`;
+  detailEl.textContent = `${peopleWord} free${moreCount}`;
+  el.classList.add('show');
+}
+
+// ── LEGEND ───────────────────────────────────────────────────────────────────
+function buildLegend() {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+
+  if (currentTab === 'mine') {
+    legend.innerHTML = `
+      <div class="legend-item">
+        <div class="legend-pip" style="background:var(--current-color,var(--accent))"></div>
+        <span>free</span>
+      </div>`;
+  } else {
+    const peopleItems = NAMES.map(n => `
+      <div class="legend-item">
+        <div class="legend-pip" style="background:${COLORS[n]}"></div>
+        <span>${n.toLowerCase()}</span>
+      </div>`).join('');
+    const heatItems = `
+      <div class="legend-sep"></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(24,204,72,0.42)"></div><span>2 — go</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(24,204,72,0.55);box-shadow:inset 0 0 0 1px rgba(120,255,160,0.45)"></div><span>3</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(24,204,72,0.65);box-shadow:inset 0 0 0 1px rgba(120,255,160,0.7)"></div><span>4</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(115deg,rgba(255,105,180,0.24),rgba(255,200,80,0.24),rgba(120,220,140,0.24),rgba(120,180,255,0.24),rgba(179,110,247,0.24))"></div><span>5 ✨</span></div>`;
+    legend.innerHTML = peopleItems + heatItems;
+  }
+}
+
+// ── GOOGLE SHEETS ─────────────────────────────────────────────────────────────
+// Sheet layout: Row 1 = headers (Name, Mon-0, Mon-1, ..., Sun-11)
+// Each user has one row identified by their name in col A
+
+function getWeekKey() {
+  // Returns current week's Monday as YYYY-MM-DD
+  const today = new Date();
+  const day = today.getDay();
+  const diffToMon = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMon);
+  const y = monday.getFullYear();
+  const m = String(monday.getMonth() + 1).padStart(2, '0');
+  const d = String(monday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function offsetWeek(baseWeek, offsetDays) {
+  const d = new Date(baseWeek + 'T12:00:00');
+  d.setDate(d.getDate() + offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+async function changeWeek(dir) {
+  await flushPendingSave();
+  activeWeek = offsetWeek(activeWeek, dir * 7);
+  lsSet('rs_active_week', activeWeek);
+  loadWeekFromCache();
+  buildGrid();
+  renderGrid();
+  updateWeekNav();
+  updateAvatars();
+}
+
+function updateWeekNav() {
+  const monday = new Date(activeWeek + 'T12:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.getDate() + ' ' + d.toLocaleString('en', {month: 'short'});
+  const isThisWeek = activeWeek === getWeekKey();
+  const label = document.getElementById('week-nav-label');
+  label.innerHTML = `${fmt(monday)} – ${fmt(sunday)}${isThisWeek ? '<span class="current-badge">this week</span>' : ''}`;
+  // Sync hidden date input
+  const picker = document.getElementById('week-picker');
+  if (picker) picker.value = activeWeek;
+  // Today button always visible. Active state when focus is on AND we're on this week.
+  const todayBtn = document.getElementById('week-today-btn');
+  todayBtn.classList.remove('hidden');
+  todayBtn.classList.toggle('active', focusToday && isThisWeek);
+}
+
+function openWeekPicker() {
+  const picker = document.getElementById('week-picker');
+  if (picker.showPicker) picker.showPicker();
+  else picker.click();
+}
+
+async function goToToday() {
+  await flushPendingSave();
+  const wasThisWeek = activeWeek === getWeekKey();
+  activeWeek = getWeekKey();
+  lsSet('rs_active_week', activeWeek);
+  // If already on this week, toggle focus. Otherwise navigate in and turn focus ON.
+  focusToday = wasThisWeek ? !focusToday : true;
+  lsSet('rs_focus_today', String(focusToday));
+  loadWeekFromCache();
+  buildGrid();
+  renderGrid();
+  updateWeekNav();
+  updateAvatars();
+}
+
+async function jumpToWeek(dateStr) {
+  if (!dateStr) return;
+  await flushPendingSave();
+  // Snap to the Monday of whatever week the picked date falls in
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  const diffToMon = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diffToMon);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  activeWeek = `${y}-${m}-${dd}`;
+  lsSet('rs_active_week', activeWeek);
+  loadWeekFromCache();
+  buildGrid();
+  renderGrid();
+  updateWeekNav();
+  updateAvatars();
+}
+
+function normalizeWeek(v) {
+  if (!v) return '';
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Sheets sometimes returns Date-formatted cells as ISO strings — normalize
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
+  return s;
+}
+
+function loadWeekFromCache() {
+  // Load from cached sheet data for the active week
+  NAMES.forEach(name => {
+    const row = allSheetData.find(r =>
+      String(r[0]).trim() === name && normalizeWeek(r[1]) === activeWeek
+    );
+    teamData[name] = {};
+    if (row) {
+      let colIdx = 2;
+      for (let d = 0; d < 7; d++) {
+        for (let s = 0; s < SLOTS_PER_DAY; s++) {
+          teamData[name][slotKey(d, s)] = String(row[colIdx] || '0').trim() === '1';
+          colIdx++;
+        }
+      }
+    }
+  });
+  myData = { ...(teamData[currentUser] || {}) };
+}
+
+function buildHeaders() {
+  const headers = ['Name', 'week'];
+  for (let d = 0; d < 7; d++) {
+    for (let s = 0; s < SLOTS_PER_DAY; s++) {
+      headers.push(slotKey(d, s));
+    }
+  }
+  return headers;
+}
+
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxk3_36pxB1XRvymDVlaXfrlBkXFBu1qSAKjltJDVFIraDQ59JKpvmhFz82WPivBTqs/exec';
+const TOTAL_COLS = 2 + 7 * SLOTS_PER_DAY; // 198
+
+async function loadAllData() {
+  setStatus('<span class="spinner"></span>Loading...');
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const rows = await res.json();
+    // Strip header row if present (first row has "Name" or non-name string in col 0)
+    allSheetData = rows.filter(r => NAMES.includes(String(r[0]).trim()));
+    lastFetchAt = Date.now();
+    // Now slice to active week
+    loadWeekFromCache();
+    renderGrid();
+    updateAvatars();
+    updateWeekNav();
+    setStatus('<span class="live-dot"></span> live');
+    startPoll();
+  } catch (e) {
+    setStatus('');
+    showToast('Could not load: ' + e.message, true);
+  }
+}
+
+// Background poll: fetch fresh data every 20s, preserve current user's unsaved edits
+function startPoll() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible' && !isDragging) pollData();
+  }, 20000);
+  // Also refresh whenever the tab regains focus
+  if (!startPoll._listenerAttached) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !isDragging) pollData();
+    });
+    window.addEventListener('focus', () => {
+      if (!isDragging) pollData();
+    });
+    startPoll._listenerAttached = true;
+  }
+}
+
+async function pollData() {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const rows = await res.json();
+    allSheetData = rows.filter(r => NAMES.includes(String(r[0]).trim()));
+    lastFetchAt = Date.now();
+
+    const dirty = isDirty();
+    NAMES.forEach(name => {
+      // Don't clobber my unsaved edits
+      if (name === currentUser && dirty) return;
+      const row = allSheetData.find(r =>
+        String(r[0]).trim() === name && normalizeWeek(r[1]) === activeWeek
+      );
+      teamData[name] = {};
+      if (row) {
+        let colIdx = 2;
+        for (let d = 0; d < 7; d++) {
+          for (let s = 0; s < SLOTS_PER_DAY; s++) {
+            teamData[name][slotKey(d, s)] = String(row[colIdx] || '0').trim() === '1';
+            colIdx++;
+          }
+        }
+      }
+    });
+    // If not dirty, sync myData with the fresh team data for currentUser
+    if (!dirty && currentUser) {
+      myData = { ...(teamData[currentUser] || {}) };
+    }
+
+    // Re-render whichever view is active
+    renderGrid();
+    updateAvatars();
+  } catch (e) {
+    // Silent — keep last good data
+  }
+}
+
+async function initSheet() {
+  const headers = buildHeaders();
+  const row0 = headers;
+  const dataRows = NAMES.map(n => {
+    const r = new Array(headers.length).fill('0');
+    r[0] = n;
+    r[1] = getWeekKey();
+    return r;
+  });
+  // Write header + all user rows via POST
+  for (const r of [row0, ...dataRows]) {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ name: r[0], row: r })
+    });
+  }
+  NAMES.forEach(n => { teamData[n] = {}; });
+  myData = {};
+  renderGrid();
+  updateAvatars();
+  setStatus('<span class="live-dot"></span> live');
+}
+
+async function saveAvailability() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Saving';
+  try {
+    const row = [currentUser, activeWeek];
+    for (let d = 0; d < 7; d++) {
+      for (let s = 0; s < SLOTS_PER_DAY; s++) {
+        row.push(myData[slotKey(d, s)] ? '1' : '0');
+      }
+    }
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ name: currentUser, row })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error('Script error');
+    teamData[currentUser] = { ...myData };
+    // Update or insert in local cache so week navigation stays consistent
+    const idx = allSheetData.findIndex(r =>
+      String(r[0]).trim() === currentUser && normalizeWeek(r[1]) === activeWeek
+    );
+    if (idx >= 0) allSheetData[idx] = row;
+    else allSheetData.push(row);
+    btn.classList.remove('dirty');
+    btn.innerHTML = '✓ Saved';
+    lastSavedAt = Date.now();
+    updateAvatars();
+    updateTabTitle();
+    setStatus('<span class="live-dot"></span> live');
+    setTimeout(() => { if (!isDirty()) btn.textContent = 'Save'; }, 1400);
+  } catch (e) {
+    showToast('Save failed: ' + e.message, true);
+    btn.textContent = 'Save';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function totalSlots() { return 7 * SLOTS_PER_DAY; }
+
+function countFreeFor(name) {
+  const data = (name === currentUser) ? myData : (teamData[name] || {});
+  let n = 0;
+  for (const k in data) if (data[k]) n++;
+  return n;
+}
+
+function updateAvatars() {
+  const el = document.getElementById('team-avatars');
+  const total = totalSlots();
+  el.innerHTML = NAMES.map(n => {
+    const count = countFreeFor(n);
+    const hasData = count > 0;
+    const pct = Math.round((count / total) * 100);
+    const isMe = n === currentUser;
+    const isFiltered = teamFilter === n;
+    return `<div class="avatar ${hasData ? 'loaded' : ''} ${isMe ? 'is-me' : ''} ${isFiltered ? 'is-filtered' : ''}" style="--acolor:${COLORS[n]}" onclick="toggleAvatarFilter('${n}')" title="Click to ${isFiltered ? 'clear filter' : 'show only ' + n + ' in Team View'}">
+      <div class="avatar-row">
+        <div class="avatar-pip"></div>
+        <span class="avatar-name">${n}</span>
+        <span class="avatar-count">${count}</span>
+      </div>
+      <div class="avatar-bar"><div class="avatar-bar-fill" style="--fill:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  updateHeaderMeta();
+  refreshCopyLastBtn();
+}
+
+function relativeTimeShort(ms) {
+  if (!ms) return '';
+  const sec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (sec < 5) return 'just now';
+  if (sec < 60) return sec + 's ago';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + 'm ago';
+  const hr = Math.floor(min / 60);
+  return hr + 'h ago';
+}
+
+function updateHeaderMeta() {
+  const metaWeek = document.getElementById('meta-week');
+  const metaSaved = document.getElementById('meta-saved');
+  if (!metaWeek || !metaSaved) return;
+  const monday = new Date(activeWeek + 'T12:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.getDate() + ' ' + d.toLocaleString('en', {month: 'short'});
+  metaWeek.textContent = `Week of ${fmt(monday)}`;
+  const savedCount = NAMES.filter(n => countFreeFor(n) > 0).length;
+  const synced = lastFetchAt ? ` · synced ${relativeTimeShort(lastFetchAt)}` : '';
+  metaSaved.textContent = `${savedCount}/5 saved${synced}`;
+  metaSaved.className = savedCount === 5 ? 'meta-strong' : '';
+}
+
+// Refresh the "synced Xs ago" label every 10s so it stays fresh
+setInterval(updateHeaderMeta, 10000);
+
+function setStatus(html) {
+  const el = document.getElementById('save-status');
+  if (el) el.innerHTML = html;
+}
+
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error show' : 'success show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 2500);
+}
+
+// ── ADMIN ────────────────────────────────────────────────────────────────────
+const ADMIN_PASSWORD = 'RADICAL!';
+
+function openAdmin() {
+  const overlay = document.getElementById('admin-overlay');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+  document.getElementById('admin-pw').value = '';
+  document.getElementById('admin-error').textContent = '';
+  document.getElementById('admin-controls').style.display = 'none';
+  document.getElementById('admin-auth-btn').style.display = '';
+  document.getElementById('admin-success').style.display = 'none';
+  setTimeout(() => document.getElementById('admin-pw').focus(), 100);
+}
+
+function closeAdmin() {
+  const overlay = document.getElementById('admin-overlay');
+  overlay.classList.remove('visible');
+  setTimeout(() => overlay.style.display = 'none', 200);
+}
+
+function adminAuth() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw !== ADMIN_PASSWORD) {
+    document.getElementById('admin-error').textContent = 'Wrong password.';
+    return;
+  }
+  document.getElementById('admin-error').textContent = '';
+  document.getElementById('admin-controls').style.display = 'block';
+  document.getElementById('admin-auth-btn').style.display = 'none';
+}
+
+async function writeAllRows(weekKey) {
+  // Write blank rows for all 5 people for a given week
+  const rows = NAMES.map(name => [name, weekKey, ...Array(TOTAL_COLS - 2).fill('0')]);
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ rows, weekKey }) });
+  const json = await res.json();
+  if (!json.ok) throw new Error('Bulk reset failed');
+}
+
+async function adminReset() {
+  if (!confirm('Reset ALL availability data for everyone?')) return;
+  setAdminLoading(true, 'Resetting...');
+  try {
+    await writeAllRows(activeWeek);
+    // Update cache — remove rows for this week, re-add blank ones
+    allSheetData = allSheetData.filter(r => String(r[1]).trim() !== activeWeek);
+    NAMES.forEach(n => {
+      teamData[n] = {};
+      allSheetData.push([n, activeWeek, ...Array(TOTAL_COLS - 2).fill('0')]);
+    });
+    myData = {};
+    renderGrid();
+    updateAvatars();
+    setAdminSuccess('All clear! Everyone reset.');
+    setTimeout(closeAdmin, 1800);
+  } catch(e) {
+    setAdminLoading(false);
+    document.getElementById('admin-error').textContent = 'Failed: ' + e.message;
+  }
+}
+
+function setAdminLoading(on, msg) {
+  const btns = document.querySelectorAll('.admin-action-btn, .admin-cancel-btn, #admin-auth-btn');
+  btns.forEach(b => b.disabled = on);
+  if (on) document.getElementById('admin-error').textContent = msg || '';
+}
+
+function setAdminSuccess(msg) {
+  document.getElementById('admin-controls').style.display = 'none';
+  document.getElementById('admin-success').style.display = 'block';
+  document.getElementById('admin-success').textContent = msg;
+  setAdminLoading(false);
+}
+
+// Close on overlay click
+document.getElementById('admin-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeAdmin();
+});
+document.getElementById('admin-pw').addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeAdmin();
+});
+
+// Enter key on password field
+document.getElementById('admin-pw').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') adminAuth();
+});
+
+// ── PASSCODE: Enter key submits ──────────────────────────────────────────────
+document.getElementById('passcode-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') unlockSite();
+});
+
+// ── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  // Skip when typing in an input
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  // Skip if main view isn't visible (passcode/picker showing)
+  const mainView = document.getElementById('main-view');
+  if (!mainView || mainView.style.display === 'none') return;
+  // Skip if admin modal is open
+  if (document.getElementById('admin-overlay').classList.contains('visible')) return;
+
+  if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault();
+    flushPendingSave();
+    if (isDirty()) saveAvailability();
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return; // ignore other modified keys
+
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); changeWeek(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); changeWeek(1); }
+  else if (e.key === 't' || e.key === 'T') { e.preventDefault(); goToToday(); }
+  else if (e.key === '1') { e.preventDefault(); switchTab('mine'); }
+  else if (e.key === '2') { e.preventDefault(); switchTab('team'); }
+});
+
+// ── GLOBAL DRAG-END LISTENERS (once only) ────────────────────────────────────
+// Only call markDirty if we were actually drag-painting — not on every tap.
+// Calling markDirty on every touchend destroys/recreates avatar DOM nodes
+// before the browser fires click, swallowing taps on dynamically-built elements.
+document.addEventListener('mouseup',  () => { const was = isDragging; isDragging = false; if (was) markDirty(); });
+document.addEventListener('touchend', () => { const was = isDragging; isDragging = false; if (was) markDirty(); });
+
+// ── START ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
