@@ -2,7 +2,7 @@
 
 A weekly availability scheduler built for a 5-person robotics squad. Each teammate marks when they're free, and everyone can see the team overlap in real time.
 
-**Built with Claude.**
+
 
 ## Live Demo
 
